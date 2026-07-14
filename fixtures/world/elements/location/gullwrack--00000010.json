@@ -1,0 +1,7 @@
+{
+  "id": "00000000-0000-7000-8000-000000000010",
+  "name": "Gullwrack",
+  "description": "A fog-prone harbor town built on pilings over its own drowned first street.\n\nThe tide decides which streets exist each morning.",
+  "supertype": "Settlement",
+  "climate": "cold maritime"
+}

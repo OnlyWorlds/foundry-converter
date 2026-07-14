@@ -1,0 +1,7 @@
+{
+  "id": "00000000-0000-7000-8000-000000000050",
+  "name": "The Tide Ledger",
+  "description": "Maren's leather-bound record of every passage & every drowned street.",
+  "supertype": "Document",
+  "location": "00000000-0000-7000-8000-000000000010"
+}

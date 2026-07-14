@@ -1,0 +1,19 @@
+{
+  "name": "world-to-foundry",
+  "version": "0.1.0",
+  "description": "Convert an OnlyWorlds world folder into an installable Foundry VTT module (a JournalEntry compendium). Zero runtime dependencies; the converter emits plain-JSON module source. Optional LevelDB pack compilation via the official foundryvtt-cli devDependency.",
+  "type": "module",
+  "bin": {
+    "world-to-foundry": "src/cli.js"
+  },
+  "scripts": {
+    "fixtures": "node fixtures/make_fixture.js",
+    "test": "node --test test/convert.test.js",
+    "pack": "node scripts/pack.js"
+  },
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@foundryvtt/foundryvtt-cli": "^3.0.4"
+  }
+}

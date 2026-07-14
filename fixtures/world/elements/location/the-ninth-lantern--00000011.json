@@ -1,0 +1,7 @@
+{
+  "id": "00000000-0000-7000-8000-000000000011",
+  "name": "The Ninth Lantern",
+  "description": "A decommissioned lighthouse at the harbor mouth, dark for thirty years.",
+  "supertype": "Landmark",
+  "parent_location": "00000000-0000-7000-8000-000000000010"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "00000000-0000-7000-8000-000000000060",
+  "name": "The Nine-Day Fog",
+  "description": "The spring fog that would not lift.",
+  "supertype": "Historical",
+  "locations": [
+    "00000000-0000-7000-8000-000000000010"
+  ]
+}
