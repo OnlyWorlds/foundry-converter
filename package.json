@@ -9,7 +9,8 @@
   "scripts": {
     "fixtures": "node fixtures/make_fixture.js",
     "test": "node --test test/convert.test.js",
-    "pack": "node scripts/pack.js"
+    "pack": "node scripts/pack.js",
+    "build:zip": "node scripts/release-zip.js"
   },
   "license": "MIT",
   "private": true,

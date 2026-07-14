@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { readWorldFolder } from "../src/folder.js";
 import { foundryId, journalId, pageId } from "../src/ids.js";
 import { buildPageHtml, escapeHtml, isLinkValue } from "../src/html.js";
-import { buildModule, defaultModuleId } from "../src/module.js";
+import { buildModule, defaultModuleId, packageVersion, DEFAULT_REPO_URL } from "../src/module.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(here, "..");
@@ -132,8 +132,10 @@ test("module.json shape matches the brief", () => {
 
   assert.equal(manifest.id, "ow-gullwrack-sound");
   assert.equal(manifest.title, "Gullwrack Sound (OnlyWorlds)");
-  assert.equal(manifest.version, "0.1.0");
+  // version defaults to the converter's own package.json version (R2)
+  assert.equal(manifest.version, packageVersion());
   assert.deepEqual(manifest.authors, [{ name: "OnlyWorlds" }]);
+  // R4: compatibility left untouched until a licensed tester confirms the floor
   assert.deepEqual(manifest.compatibility, { minimum: "11", verified: "12" });
   assert.equal(manifest.packs.length, 1);
   assert.deepEqual(manifest.packs[0], {
@@ -156,6 +158,73 @@ test("module.json shape matches the brief", () => {
   }
 
   assert.equal(defaultModuleId("Île de Sikélia"), "ow-ile-de-sikelia");
+});
+
+// --- distribution/discovery manifest fields (R1) ----------------------------
+
+test("manifest carries distribution fields with GitHub-Releases URL pattern (R1)", () => {
+  const folder = readWorldFolder(FIXTURE);
+  const { manifest } = buildModule(folder, "ow-gullwrack-sound");
+
+  // every distribution/discovery field is present
+  for (const key of ["url", "manifest", "download", "authors", "license", "readme"]) {
+    assert.ok(key in manifest, `manifest has ${key}`);
+  }
+
+  // defaults derive from the placeholder repo URL
+  assert.equal(manifest.url, DEFAULT_REPO_URL);
+  assert.equal(manifest.license, "MIT");
+  assert.equal(manifest.readme, `${DEFAULT_REPO_URL}/blob/main/README.md`);
+
+  // manifest = "latest" pointer (auto-update); download = version-pinned asset
+  assert.equal(manifest.manifest, `${DEFAULT_REPO_URL}/releases/latest/download/module.json`);
+  assert.equal(
+    manifest.download,
+    `${DEFAULT_REPO_URL}/releases/download/v${packageVersion()}/module.zip`
+  );
+
+  // media is optional and must NOT be invented (no fake screenshot URLs)
+  assert.ok(!("media" in manifest), "no invented media/screenshot URLs");
+});
+
+test("manifest distribution fields honor CLI/opts overrides (R1)", () => {
+  const folder = readWorldFolder(FIXTURE);
+  const { manifest } = buildModule(folder, "ow-x", {
+    repoUrl: "https://github.com/acme/my-world/", // trailing slash normalized
+    author: "Acme",
+    license: "CC-BY-4.0",
+    version: "2.3.4",
+  });
+
+  assert.deepEqual(manifest.authors, [{ name: "Acme" }]);
+  assert.equal(manifest.license, "CC-BY-4.0");
+  assert.equal(manifest.url, "https://github.com/acme/my-world");
+  assert.equal(manifest.readme, "https://github.com/acme/my-world/blob/main/README.md");
+  assert.equal(manifest.manifest, "https://github.com/acme/my-world/releases/latest/download/module.json");
+});
+
+// --- version templating (R2) ------------------------------------------------
+
+test("version comes from --version opt and templates the download URL (R2)", () => {
+  const folder = readWorldFolder(FIXTURE);
+  const { manifest } = buildModule(folder, "ow-ver", { version: "1.5.0" });
+
+  assert.equal(manifest.version, "1.5.0", "explicit version wins");
+  // download URL pins the SAME version so auto-update detects the bump
+  assert.equal(
+    manifest.download,
+    `${DEFAULT_REPO_URL}/releases/download/v1.5.0/module.zip`
+  );
+  // manifest URL stays version-independent (always-latest)
+  assert.equal(manifest.manifest, `${DEFAULT_REPO_URL}/releases/latest/download/module.json`);
+});
+
+test("version falls back to the converter's package.json, never hard-coded 0.1.0 by string (R2)", () => {
+  const folder = readWorldFolder(FIXTURE);
+  const { manifest } = buildModule(folder, "ow-fallback");
+  assert.equal(manifest.version, packageVersion());
+  // packageVersion reads the real file — assert it's a semver-shaped string
+  assert.match(manifest.version, /^\d+\.\d+\.\d+/);
 });
 
 test("empty type dir produces no Journal", () => {
@@ -207,13 +276,20 @@ test("CLI e2e: fixture folder in → module dir out with expected tree", () => {
 
 // --- pack compilation (only when the devDep is installed) -------------------
 
-test("npm run pack compiles a LevelDB pack when foundryvtt-cli is present", async (t) => {
+test("npm run pack compiles a LevelDB pack (foundryvtt-cli devDep is load-bearing)", async () => {
+  // R5: foundryvtt-cli is a declared devDependency, so a proper `npm install`
+  // MUST provide it. Do NOT skip when it's absent — a silent skip lets CI pass
+  // green while never proving the LevelDB pack actually compiles. Fail LOUD
+  // instead, so a missing/uninstalled devDep is a hard, visible failure.
   let compilePack;
   try {
     ({ compilePack } = await import("@foundryvtt/foundryvtt-cli"));
-  } catch {
-    t.skip("@foundryvtt/foundryvtt-cli not installed — pack step is a manual step");
-    return;
+  } catch (err) {
+    assert.fail(
+      "@foundryvtt/foundryvtt-cli is not importable — the pack-compile test cannot " +
+        "verify LevelDB output. It is a declared devDependency; run `npm install` " +
+        "(with dev deps) before `npm test`. Original error: " + err.message
+    );
   }
 
   const out = mkdtempSync(join(tmpdir(), "ow-pack-"));
@@ -229,4 +305,29 @@ test("npm run pack compiles a LevelDB pack when foundryvtt-cli is present", asyn
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+// --- release zip layout + determinism (R3) ----------------------------------
+
+test("build:zip produces module.json at zip root + packs/, deterministically (R3)", async () => {
+  const { zipBuffer } = await import("../scripts/zip.js");
+
+  const entries = [
+    { name: "module.json", data: Buffer.from('{"id":"ow-x"}') },
+    { name: "packs/lore/CURRENT", data: Buffer.from("MANIFEST-000001\n") },
+  ];
+  const a = zipBuffer(entries);
+  const b = zipBuffer(entries);
+
+  // deterministic: identical inputs → byte-identical archive
+  assert.ok(a.equals(b), "same inputs yield byte-identical zip");
+
+  // valid ZIP signatures: local file header + end-of-central-directory
+  assert.equal(a.readUInt32LE(0), 0x04034b50, "local file header magic");
+  assert.equal(a.readUInt32LE(a.length - 22), 0x06054b50, "EOCD magic");
+
+  // module.json is the FIRST entry (zip root), packs/ nested — layout Foundry wants
+  const nameLen = a.readUInt16LE(26);
+  const firstName = a.slice(30, 30 + nameLen).toString("utf8");
+  assert.equal(firstName, "module.json", "module.json at zip root, first entry");
 });

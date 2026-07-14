@@ -23,6 +23,10 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--out") args.out = argv[++i];
     else if (a === "--module-id") args.moduleId = argv[++i];
+    else if (a === "--version") args.version = argv[++i];
+    else if (a === "--repo-url") args.repoUrl = argv[++i];
+    else if (a === "--author") args.author = argv[++i];
+    else if (a === "--license") args.license = argv[++i];
     else if (a === "--help" || a === "-h") args.help = true;
     else args._.push(a);
   }
@@ -37,6 +41,10 @@ Usage:
 Options:
   --out <dir>        output module directory (default: ./<module-id>/)
   --module-id <id>   module id (default: ow-<slugified world name>)
+  --version <ver>    module version (default: this converter's package.json version)
+  --repo-url <url>   GitHub repo URL for manifest/download/url/readme fields
+  --author <name>    module author name (default: OnlyWorlds)
+  --license <spec>   module license (default: MIT)
   --help, -h         show this help
 
 Then compile the LevelDB pack:
@@ -55,12 +63,17 @@ try {
   const moduleId = args.moduleId || defaultModuleId(folder.world.name);
   const outDir = args.out || `./${moduleId}`;
 
-  const built = buildModule(folder, moduleId);
+  const built = buildModule(folder, moduleId, {
+    version: args.version,
+    repoUrl: args.repoUrl,
+    author: args.author,
+    license: args.license,
+  });
   const written = writeModule(outDir, built);
 
   const byType = built.journals.map((j) => `${j.doc.name} (${j.doc.pages.length})`);
   console.log(`world: ${folder.world.name}`);
-  console.log(`module: ${moduleId}`);
+  console.log(`module: ${moduleId} v${built.manifest.version}`);
   console.log(`out: ${outDir}`);
   console.log(`journals: ${built.journals.length} — ${byType.join(", ") || "none"}`);
   console.log(`files: ${written.length}`);

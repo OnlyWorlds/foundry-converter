@@ -16,11 +16,39 @@
  * only — not verified in a running Foundry instance. See README honest flags.
  */
 
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { journalId, pageId } from "./ids.js";
 import { readWorldFolder, typeLabel, typePlural } from "./folder.js";
 import { buildPageHtml } from "./html.js";
+
+/**
+ * Distribution defaults for the emitted manifest (R1/R2).
+ *
+ * The GitHub repo has no canonical remote configured yet, so these point at the
+ * placeholder org repo. Override any of them per-build via CLI options
+ * (--repo-url, --author, --license, --version). The url/manifest/download fields
+ * follow the GitHub-Releases manifest-URL install pattern (see RELEASING.md):
+ *   - manifest → releases/latest/download/module.json  (stable "always latest",
+ *     drives Foundry auto-update)
+ *   - download → releases/download/v<version>/module.zip (a version-pinned asset,
+ *     so old versions stay installable and updates are detected)
+ */
+export const DEFAULT_REPO_URL = "https://github.com/OnlyWorlds/world-to-foundry";
+export const DEFAULT_AUTHOR = "OnlyWorlds";
+export const DEFAULT_LICENSE = "MIT";
+
+/** Read this converter's own package.json version as the version fallback (R2). */
+export function packageVersion() {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8"));
+    return pkg.version || "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 export function slugify(name, max = 60) {
   return String(name)
@@ -44,9 +72,14 @@ export function defaultModuleId(worldName) {
  * worldId is used to seed deterministic JournalEntry ids; falls back to the
  * moduleId when the world.json carries no id.
  */
-export function buildModule({ world, types, byId }, moduleId) {
+export function buildModule({ world, types, byId }, moduleId, opts = {}) {
   const worldName = world.name || "Untitled World";
   const worldId = world.id || moduleId;
+
+  const version = opts.version || packageVersion();
+  const repoUrl = (opts.repoUrl || DEFAULT_REPO_URL).replace(/\/+$/, "");
+  const author = opts.author || DEFAULT_AUTHOR;
+  const license = opts.license || DEFAULT_LICENSE;
 
   // Resolver: OW uuid → { journalId, pageId, name } for @UUID enricher refs.
   const resolve = (uuid) => {
@@ -94,9 +127,21 @@ export function buildModule({ world, types, byId }, moduleId) {
     id: moduleId,
     title: `${worldName} (OnlyWorlds)`,
     description: `OnlyWorlds world "${worldName}" imported as a Foundry VTT journal compendium. One journal per element type; every cross-link preserved as an @UUID reference.`,
-    version: "0.1.0",
-    authors: [{ name: "OnlyWorlds" }],
+    version,
+    authors: [{ name: author }],
+    // R4: compatibility values are a plausible-but-UNVERIFIED floor. Do NOT bump
+    // these on a guess — the correct floor comes from a licensed in-app load, not
+    // from this build step. Leave exactly as-is until a real tester confirms.
     compatibility: { minimum: "11", verified: "12" },
+    // Distribution/discovery fields for the manifest-URL install path (R1).
+    url: repoUrl,
+    license,
+    readme: `${repoUrl}/blob/main/README.md`,
+    // manifest = stable "latest" pointer → Foundry auto-update (R2).
+    manifest: `${repoUrl}/releases/latest/download/module.json`,
+    // download = version-pinned release asset so updates are detected + old
+    // versions stay installable (R2).
+    download: `${repoUrl}/releases/download/v${version}/module.zip`,
     packs: [
       {
         name: "lore",
@@ -134,10 +179,10 @@ export function writeModule(outDir, { manifest, journals }) {
 }
 
 /** Full pipeline: read folder, build module, write it. */
-export function convert(worldDir, outDir, moduleId) {
+export function convert(worldDir, outDir, moduleId, opts = {}) {
   const folder = readWorldFolder(worldDir);
   const id = moduleId || defaultModuleId(folder.world.name);
-  const built = buildModule(folder, id);
+  const built = buildModule(folder, id, opts);
   const written = writeModule(outDir, built);
   return { moduleId: id, manifest: built.manifest, journals: built.journals, written };
 }
