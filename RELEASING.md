@@ -9,7 +9,7 @@ Foundry can auto-update. This doc is the exact flow for a single converted world
 ## 0. Prerequisites
 
 - The GitHub repo that will host the release. By default the emitted manifest
-  points at `https://github.com/OnlyWorlds/world-to-foundry` (placeholder).
+  points at `https://github.com/OnlyWorlds/foundry-converter` (placeholder).
   Point it at the real repo with `--repo-url` at build time (see below).
 - `@foundryvtt/foundryvtt-cli` installed (`npm install` pulls it as a devDep) —
   needed to compile the LevelDB pack.

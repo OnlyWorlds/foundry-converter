@@ -1,6 +1,10 @@
-# world-to-foundry
+# foundry-converter
 
-Convert an **OnlyWorlds** world FOLDER into an installable **Foundry VTT** module — a JournalEntry compendium where every element becomes a journal page and every cross-link becomes a clickable `@UUID` reference.
+Convert an **OnlyWorlds** world into an installable **Foundry VTT** module: a JournalEntry compendium where every element becomes a journal page and every cross-link becomes a clickable `@UUID` reference.
+
+> **New to OnlyWorlds?** It is an open standard for worldbuilding data: 22 typed element categories (Character, Location, Institution, Event, …) with defined fields and relationships, stored as plain files you own. One structure, readable by any tool. See [onlyworlds.com](https://www.onlyworlds.com), the [docs](https://onlyworlds.github.io), and the [schema](https://github.com/OnlyWorlds/OnlyWorlds). This tool is a one-way bridge OUT of OnlyWorlds and into Foundry.
+>
+> **For AI assistants**: the input is an OnlyWorlds world folder (one JSON file per element, `id` = identity). Types and fields are defined in the [schema repo](https://github.com/OnlyWorlds/OnlyWorlds) and the [LLM guide](https://onlyworlds.github.io/assets/ow_llm_guide.txt). This converter is read-only over that folder and emits a Foundry module tree; it contains no network code.
 
 | OnlyWorlds | Foundry VTT |
 |---|---|
@@ -23,7 +27,7 @@ node src/cli.js <world-folder> [--out <module-dir>] [--module-id <id>] \
 - Default module id = `ow-<slugified world name>` (e.g. `ow-sikelia`).
 - Default out dir = `./<module-id>/`.
 - Default version = this converter's own `package.json` version (never hard-coded).
-- Default repo URL = `https://github.com/OnlyWorlds/world-to-foundry` (placeholder);
+- Default repo URL = `https://github.com/OnlyWorlds/foundry-converter` (placeholder);
   it templates the manifest's `url`, `manifest`, `download`, and `readme` fields
   for the GitHub-Releases install path. Pass `--repo-url` to point at your repo.
 

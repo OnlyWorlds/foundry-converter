@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * world-to-foundry — convert an OnlyWorlds world FOLDER into an installable
+ * foundry-converter — convert an OnlyWorlds world FOLDER into an installable
  * Foundry VTT module (a JournalEntry compendium).
  *
  * Usage:
@@ -33,7 +33,7 @@ function parseArgs(argv) {
   return args;
 }
 
-const HELP = `world-to-foundry — OnlyWorlds world folder → Foundry VTT module
+const HELP = `foundry-converter — OnlyWorlds world folder → Foundry VTT module
 
 Usage:
   node src/cli.js <world-folder> [--out <module-dir>] [--module-id <id>]

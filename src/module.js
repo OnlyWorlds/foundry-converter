@@ -35,7 +35,7 @@ import { buildPageHtml } from "./html.js";
  *   - download → releases/download/v<version>/module.zip (a version-pinned asset,
  *     so old versions stay installable and updates are detected)
  */
-export const DEFAULT_REPO_URL = "https://github.com/OnlyWorlds/world-to-foundry";
+export const DEFAULT_REPO_URL = "https://github.com/OnlyWorlds/foundry-converter";
 export const DEFAULT_AUTHOR = "OnlyWorlds";
 export const DEFAULT_LICENSE = "MIT";
 
