@@ -60,6 +60,30 @@ try {
   // foundryvtt-cli compilePack(src, dest, options): reads JSON docs from src,
   // writes a classic-level (LevelDB) pack to dest.
   await compilePack(src, dest, { log: true });
+
+  // Verify the compile actually packed entries. The cli SILENTLY SKIPS any
+  // source doc without a _key, so a green compile can still be an empty pack
+  // (learned live: Foundry indexed 0 of 18 journals). Round-trip and count.
+  const { extractPack } = await import("@foundryvtt/foundryvtt-cli");
+  const { mkdtempSync, readdirSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const probe = mkdtempSync(join(tmpdir(), "w2f-verify-"));
+  try {
+    await extractPack(dest, probe, { log: false });
+    const extracted = readdirSync(probe).filter((f) => f.endsWith(".json")).length;
+    const { readdirSync: rd } = await import("node:fs");
+    const sources = rd(src).filter((f) => f.endsWith(".json")).length;
+    if (extracted === 0 || extracted < sources) {
+      console.error(
+        `pack verification FAILED: ${sources} source docs but ${extracted} extracted from the compiled pack.` +
+          ` Likely missing _key fields in source docs.`
+      );
+      process.exit(1);
+    }
+    console.log(`verified: ${extracted}/${sources} documents round-trip from the compiled pack`);
+  } finally {
+    rmSync(probe, { recursive: true, force: true });
+  }
   console.log(`packed: ${src} -> ${dest}`);
 } catch (err) {
   console.error(`pack failed: ${err.message}`);

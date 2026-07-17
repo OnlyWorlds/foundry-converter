@@ -80,6 +80,8 @@ export function typeLabel(type) {
 
 /** Pluralize a type label for the Journal title ("Character" → "Characters"). */
 export function typePlural(label) {
+  const irregular = { Species: "Species", Phenomenon: "Phenomena" };
+  if (irregular[label]) return irregular[label];
   if (/[^aeiou]y$/i.test(label)) return label.replace(/y$/i, "ies");
   if (/(s|sh|ch|x|z)$/i.test(label)) return label + "es";
   return label + "s";

@@ -105,7 +105,7 @@ test("page HTML: links resolve to @UUID, dangling renders loud, metadata + diacr
   const html = buildPageHtml(maren, resolve);
 
   // diacritics preserved in the heading
-  assert.ok(html.includes("<h1>Maren Søback</h1>"));
+  assert.ok(!html.includes("<h1>"), "no h1 in body: page title renders natively; an h1 doubled every name in the sidebar TOC");
 
   // single + multi links resolved to enricher refs
   const guildPid = pageId("00000000-0000-7000-8000-000000000025");
@@ -136,7 +136,7 @@ test("module.json shape matches the brief", () => {
   assert.equal(manifest.version, packageVersion());
   assert.deepEqual(manifest.authors, [{ name: "OnlyWorlds" }]);
   // R4: compatibility left untouched until a licensed tester confirms the floor
-  assert.deepEqual(manifest.compatibility, { minimum: "11", verified: "12" });
+  assert.deepEqual(manifest.compatibility, { minimum: "11", verified: "14" });
   assert.equal(manifest.packs.length, 1);
   assert.deepEqual(manifest.packs[0], {
     name: "lore",
@@ -153,7 +153,7 @@ test("module.json shape matches the brief", () => {
     for (const p of doc.pages) {
       assert.equal(p.type, "text");
       assert.equal(p.text.format, 1);
-      assert.ok(p.text.content.startsWith("<h1>"));
+      assert.ok(!p.text.content.includes("<h1>"), "body carries no h1; title.show renders the name once");
     }
   }
 

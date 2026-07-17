@@ -2,7 +2,6 @@
  * Page body HTML builder (R7).
  *
  * Produces the enriched HTML content for one JournalEntryPage from an OW element:
- *   <h1>name</h1>
  *   <p>description paragraphs</p>
  *   <dl> populated type-specific TEXT fields (humanized labels) </dl>
  *   <section> Connections — link fields, each UUID resolved to a Foundry
@@ -19,7 +18,13 @@
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const SKIP_FIELDS = new Set(["id", "name", "description"]);
+// id/name/description are handled explicitly; the *_updated_at / *created* stamps
+// are folder-sync and server bookkeeping, not world content -- rendering them as
+// lore fields was caught in the first licensed render check.
+const SKIP_FIELDS = new Set([
+  "id", "name", "description",
+  "created_at", "updated_at", "local_updated_at", "server_updated_at",
+]);
 
 export function escapeHtml(s) {
   return String(s)
@@ -68,8 +73,11 @@ function renderLinkItems(value, resolve) {
   return uuids.map((uuid) => {
     const target = resolve(uuid);
     if (target) {
-      // Foundry cross-document enricher: @UUID[JournalEntry.jid.JournalEntryPage.pid]{label}
-      return `@UUID[JournalEntry.${target.journalId}.JournalEntryPage.${target.pageId}]{${escapeHtml(target.name)}}`;
+      // Foundry cross-document enricher. Links between compendium docs MUST be
+      // absolute (Compendium.<module>.<pack>....) -- bare JournalEntry.<id> uuids
+      // resolve against the WORLD collection and dead-end on click (verified live
+      // in Foundry v14: bare form fromUuid -> null, absolute form -> resolves).
+      return `@UUID[Compendium.${target.packRef}.JournalEntry.${target.journalId}.JournalEntryPage.${target.pageId}]{${escapeHtml(target.name)}}`;
     }
     const tail = String(uuid).replaceAll("-", "").slice(-8);
     return `<em>(unlinked: ${escapeHtml(tail)})</em>`;
@@ -83,7 +91,9 @@ function renderLinkItems(value, resolve) {
  */
 export function buildPageHtml(element, resolve) {
   const parts = [];
-  parts.push(`<h1>${escapeHtml(element.name || "Unnamed")}</h1>`);
+  // No name <h1> in the body: the page renders its own title (title.show), and
+  // Foundry builds the in-page TOC from content headings -- an h1 here doubled
+  // every name in the sidebar (caught by Captain in the first licensed render).
 
   if (element.description) parts.push(paragraphs(element.description));
 

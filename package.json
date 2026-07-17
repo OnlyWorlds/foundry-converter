@@ -13,7 +13,7 @@
     "build:zip": "node scripts/release-zip.js"
   },
   "license": "MIT",
-  "private": true,
+  "private": false,
   "devDependencies": {
     "@foundryvtt/foundryvtt-cli": "^3.0.4"
   }

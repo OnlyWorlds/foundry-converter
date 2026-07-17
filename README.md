@@ -64,13 +64,12 @@ install via `.../releases/latest/download/module.json`. **See [RELEASING.md](REL
 for the exact, step-by-step flow.** No Foundry-registry submission is required
 for this path.
 
-## Status — honest flags
+## Status
 
-- **Prototype.** Structurally verified only — **not yet rendered in a licensed Foundry install.**
-- **JournalEntry-only by design.** OnlyWorlds elements map to journal pages, which are game-system-agnostic. Foundry `Actor` / `Item` documents are per-game-system (dnd5e, pf2e, …) and out of scope — mapping a Character to a dnd5e Actor sheet is a separate, system-specific effort.
-- **Never loaded in a live Foundry instance** (no Foundry license held here). The module tree, `module.json`, and LevelDB pack are built to the public Foundry v11–v12 document schemas and compiled with the official `foundryvtt-cli`, but the in-app render (page HTML, `@UUID` link resolution, compendium listing) **needs a licensed tester to confirm**. Treat the first real load as a test.
-- **Pack compilation is real**: `@foundryvtt/foundryvtt-cli`'s `compilePack` produced a LevelDB `packs/lore` from the fixture module during development (2026-07-14). The tests exercise it when the devDep is installed and skip it otherwise.
-- **Foundry document schema assumptions** (flag for the licensed tester): pages use `type: "text"`, `text.format: 1` (HTML), `title.show: false`; JournalEntry/page `ownership.default` and `sort` set to conservative defaults; a `flags["ow-foundry"]` namespace carries the source UUID + type. These are the fields most likely to need adjustment if a Foundry version rejects the document.
+- **Render-proven.** A full licensed end-to-end run on Foundry **v14.364** (2026-07-14): the converted module installed, all journal pages rendered, and `@UUID` cross-links resolved and navigated in-app. Three format fixes found during that run are folded in.
+- **JournalEntry-only by design.** OnlyWorlds elements map to journal pages, which are game-system-agnostic. Foundry `Actor` / `Item` documents are per-game-system (dnd5e, pf2e, …) and out of scope: mapping a Character to a dnd5e Actor sheet is a separate, system-specific effort.
+- **Pack compilation is real**: `@foundryvtt/foundryvtt-cli`'s `compilePack` produces a LevelDB pack from the module tree. The tests exercise it when the devDep is installed and skip it otherwise.
+- **Foundry document schema**: pages use `type: "text"`, `text.format: 1` (HTML), `title.show: false`; JournalEntry/page `ownership.default` and `sort` set to conservative defaults; a `flags["ow-foundry"]` namespace carries the source UUID + type.
 
 ## Dev
 

@@ -81,11 +81,15 @@ export function buildModule({ world, types, byId }, moduleId, opts = {}) {
   const author = opts.author || DEFAULT_AUTHOR;
   const license = opts.license || DEFAULT_LICENSE;
 
-  // Resolver: OW uuid → { journalId, pageId, name } for @UUID enricher refs.
+  // Resolver: OW uuid → { packRef, journalId, pageId, name } for @UUID enricher refs.
+  // packRef makes emitted links ABSOLUTE (Compendium.<moduleId>.lore....) — required
+  // for cross-document navigation inside a compendium (bare uuids resolve against
+  // the world collection and dead-end).
   const resolve = (uuid) => {
     const hit = byId.get(uuid);
     if (!hit) return null;
     return {
+      packRef: `${moduleId}.lore`,
       journalId: journalId(worldId, hit.type),
       pageId: pageId(uuid),
       name: hit.element.name || "Unnamed",
@@ -100,9 +104,13 @@ export function buildModule({ world, types, byId }, moduleId, opts = {}) {
 
     const pages = elements.map((el, i) => ({
       _id: pageId(el.id || `${type}:${el.name}:${i}`),
+      // foundryvtt-cli requires an explicit _key on EVERY doc incl. embedded
+      // pages; docs without one are silently skipped at compile (verified
+      // against cli source: package.mjs `if (!doc._key) continue`).
+      _key: `!journal.pages!${jid}.${pageId(el.id || `${type}:${el.name}:${i}`)}`,
       name: el.name || "Unnamed",
       type: "text",
-      title: { show: false, level: 1 },
+      title: { show: true, level: 1 },
       text: {
         format: 1, // CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML
         content: buildPageHtml(el, resolve),
@@ -114,6 +122,7 @@ export function buildModule({ world, types, byId }, moduleId, opts = {}) {
 
     const doc = {
       _id: jid,
+      _key: `!journal!${jid}`,
       name: title,
       pages,
       sort: 0,
@@ -129,10 +138,10 @@ export function buildModule({ world, types, byId }, moduleId, opts = {}) {
     description: `OnlyWorlds world "${worldName}" imported as a Foundry VTT journal compendium. One journal per element type; every cross-link preserved as an @UUID reference.`,
     version,
     authors: [{ name: author }],
-    // R4: compatibility values are a plausible-but-UNVERIFIED floor. Do NOT bump
-    // these on a guess — the correct floor comes from a licensed in-app load, not
-    // from this build step. Leave exactly as-is until a real tester confirms.
-    compatibility: { minimum: "11", verified: "12" },
+    // verified: "14" is EVIDENCE, not a guess: full licensed render check on
+    // Foundry v14.364 (2026-07-14) -- pack loads 18/18, pages render, absolute
+    // @UUID cross-links navigate. minimum stays the v11 LevelDB design floor.
+    compatibility: { minimum: "11", verified: "14" },
     // Distribution/discovery fields for the manifest-URL install path (R1).
     url: repoUrl,
     license,
