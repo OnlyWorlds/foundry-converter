@@ -37,10 +37,9 @@ The emitted `module.json` already contains, for this version:
   version bump is detectable and old versions stay installable.
 - `url`, `readme`, `license`, `authors` — discovery/listing fields.
 
-> **compatibility is deliberately left as `{minimum: "11", verified: "12"}`.**
-> That floor is an unverified guess. Do NOT bump it here — set the real value
-> only after a licensed Foundry load confirms it, then edit `module.json` (and
-> `src/module.js`) once.
+> **Compatibility** is `{minimum: "11", verified: "14"}`, set in `src/module.js`.
+> Version 14 was checked by loading a converted module in a licensed Foundry.
+> Raise `verified` only after the same check on a newer version.
 
 ## 2. Compile the LevelDB pack
 
@@ -92,8 +91,7 @@ https://github.com/<you>/<repo>/releases/latest/download/module.json
 
 No registry submission or Foundry-license approval is needed for this path —
 listing on `foundryvtt.com/packages` is a separate, discoverability-only step
-(requires a Foundry license to submit). See
-`weave/foundry/intel/ecosystem-distribution.md` for the registry route.
+(requires a Foundry license to submit).
 
 ## Cutting a new version
 

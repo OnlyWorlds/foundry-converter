@@ -1,83 +1,89 @@
 # foundry-converter
 
-Convert an **OnlyWorlds** world into an installable **Foundry VTT** module: a JournalEntry compendium where every element becomes a journal page and every cross-link becomes a clickable `@UUID` reference.
+Converts an OnlyWorlds world folder into the source of a Foundry VTT module: a journal compendium with one page per element and every link as a clickable `@UUID` reference. Pack the source to install it in Foundry.
 
-> **New to OnlyWorlds?** It is an open standard for worldbuilding data: 22 typed element categories (Character, Location, Institution, Event, …) with defined fields and relationships, stored as plain files you own. One structure, readable by any tool. See [onlyworlds.com](https://www.onlyworlds.com), the [docs](https://onlyworlds.github.io), and the [schema](https://github.com/OnlyWorlds/OnlyWorlds). This tool is a one-way bridge OUT of OnlyWorlds and into Foundry.
->
-> **For AI assistants**: the input is an OnlyWorlds world folder (one JSON file per element, `id` = identity). Types and fields are defined in the [schema repo](https://github.com/OnlyWorlds/OnlyWorlds) and the [LLM guide](https://onlyworlds.github.io/assets/ow_llm_guide.txt). This converter is read-only over that folder and emits a Foundry module tree; it contains no network code.
+It runs one way, out of OnlyWorlds. Every element becomes a journal page; Foundry Actors and Items (character sheets, gear) are not made, since those depend on the game system.
 
-| OnlyWorlds | Foundry VTT |
-|---|---|
-| world folder | a module (`module.json` + one compendium pack `lore`) |
-| element TYPE (Character, Location, …) | one `JournalEntry` (e.g. "Characters") |
-| element | one `JournalEntryPage` (name, description, typed fields, connections) |
-| link field (UUID / UUID array) | `@UUID[JournalEntry.…JournalEntryPage.…]{name}` enricher — resolves in-app |
-| extension field (`x_`, `atlas_`, `shadow_`) | preserved in an "Import metadata" details block |
+## Install
 
-Unresolvable links are rendered **loudly** as `(unlinked: <uuid-tail>)` — never dropped silently. The converter is zero-runtime-dependency and forward-compatible: unknown element types still become their own Journal, unknown fields are kept.
+```
+git clone https://github.com/OnlyWorlds/foundry-converter
+cd foundry-converter
+npm install
+```
+
+Needs Node.js 18 or later. The converter itself has no dependencies; `npm install` fetches Foundry's official [foundryvtt-cli](https://github.com/foundryvtt/foundryvtt-cli), used only to pack the compendium.
+
+The input is an OnlyWorlds world folder (`world.json` plus `elements/<type>/*.json`): an [Atlas](https://atlas.onlyworlds.com) world, the Obsidian plugin's **Export as OnlyWorlds folder**, or the output of [azgaar-converter](https://github.com/OnlyWorlds/azgaar-converter).
 
 ## Use
 
-```
-node src/cli.js <world-folder> [--out <module-dir>] [--module-id <id>] \
-                               [--version <ver>] [--repo-url <url>] \
-                               [--author <name>] [--license <spec>]
-```
-
-- Default module id = `ow-<slugified world name>` (e.g. `ow-sikelia`).
-- Default out dir = `./<module-id>/`.
-- Default version = this converter's own `package.json` version (never hard-coded).
-- Default repo URL = `https://github.com/OnlyWorlds/foundry-converter` (placeholder);
-  it templates the manifest's `url`, `manifest`, `download`, and `readme` fields
-  for the GitHub-Releases install path. Pass `--repo-url` to point at your repo.
-
-This emits the module **source**: `module.json` + `packs-source/lore/*.json` (one file per JournalEntry). Then compile the source into the distributable LevelDB compendium pack:
+For a world named My World:
 
 ```
-npm install --save-dev @foundryvtt/foundryvtt-cli   # one time
-npm run pack -- --module ./ow-sikelia               # packs-source/lore → packs/lore
+node src/cli.js ./my-world                        # writes ./ow-my-world/ (module.json + packs-source/)
+npm run pack -- --module ./ow-my-world            # compiles packs-source/lore into packs/lore
 ```
 
-`npm run pack` uses the official [foundryvtt-cli](https://github.com/foundryvtt/foundryvtt-cli) (a **devDependency only** — the converter itself needs nothing). Without it you still have the full module source; you just can't compile the LevelDB pack.
+Then, in Foundry:
 
-## Determinism
+1. Copy `ow-my-world/` into your Foundry user data folder, under `Data/modules/`.
+2. Launch a world, open **Settings → Manage Modules**, enable **My World (OnlyWorlds)** and reload.
+3. Open the **My World Lore** compendium: one journal per element type, one page per element.
 
-Foundry document ids are 16-char alphanumeric strings **derived from the OnlyWorlds UUIDs** (`sha256(uuid + salt)` mapped into Foundry's id alphabet, truncated to 16). Re-running on the same world yields byte-identical ids, so cross-page links stay valid and re-imports are diff-friendly rather than duplicating.
+The module declares Foundry 11 as its minimum and is verified on Foundry 14.
 
-## Install in Foundry
+| Option | Default |
+|---|---|
+| `--out <dir>` | `./<module-id>/` |
+| `--module-id <id>` | `ow-<world name as a slug>` |
+| `--version <ver>` | this converter's version |
+| `--repo-url <url>` | `https://github.com/OnlyWorlds/foundry-converter` |
+| `--author <name>` | OnlyWorlds |
+| `--license <spec>` | MIT |
 
-1. Build and pack the module (above) — you get a directory like `ow-sikelia/` containing `module.json` and `packs/lore/`.
-2. Copy that directory into your Foundry **`Data/modules/`** folder (User Data path → `Data/modules/ow-sikelia/`). Alternatively, install it via **Setup → Add-on Modules → Install Module → Manifest URL** if you host `module.json` (see below).
-3. Launch a world, open **Settings → Manage Modules**, enable **"<World> (OnlyWorlds)"**, and reload.
-4. The compendium **"<World> Lore"** appears under **Compendium Packs**. Open it to browse one journal per element type; click `@UUID` links to jump between connected elements.
+## What it makes
 
-## Distribute (GitHub Releases)
+| OnlyWorlds | Foundry VTT |
+|---|---|
+| world folder | a module (`module.json`) with one compendium pack, `lore` |
+| element type (Character, Location, …) | one JournalEntry, such as "Characters" |
+| element | one JournalEntryPage: the description, the text and number fields, a Connections section with its links |
+| link field | `@UUID[Compendium.<module>.lore.JournalEntry.….JournalEntryPage.…]{Name}`, clickable in Foundry |
+| extension field (`x_`, `atlas_`, `shadow_`) | an "Import metadata" block on the page |
 
-The emitted `module.json` carries the distribution/discovery fields Foundry's
-manifest-URL install path needs — `url`, `manifest`, `download`, `authors`,
-`license`, `readme` — with URLs following the GitHub-Releases pattern
-(`manifest` = always-latest pointer for auto-update; `download` = version-pinned
-release asset). Build the release ZIP with:
+A link to an element that is not in the folder shows as `(unlinked: <id tail>)`. Element types the converter doesn't know still get their own journal, and unknown fields are kept.
+
+Foundry ids are derived from the OnlyWorlds ids, so converting the same world again gives the same ids, and links and re-imports stay stable.
+
+## Not converted
+
+- Maps, pins, zones and markers (the folder's `spatial/` directory).
+- Images: an element's `image_url` appears as a text field, not as a picture.
+- Formatting inside descriptions: Markdown and in-text links show as plain text.
+
+## Host the module
+
+To let others install your converted world from a manifest URL, host it as a GitHub Release. Build with `--version` and `--repo-url` pointing at your own repository, pack it, then:
 
 ```
-npm run build:zip -- --module ./ow-sikelia   # module.json at zip root + packs/
+npm run build:zip -- --module ./ow-my-world      # module.zip, with module.json at its root
 ```
 
-Then attach `module.json` + `module.zip` to a GitHub Release and let users
-install via `.../releases/latest/download/module.json`. **See [RELEASING.md](RELEASING.md)
-for the exact, step-by-step flow.** No Foundry-registry submission is required
-for this path.
+Attach `module.json` and `module.zip` to a release tagged `v<version>`. Users install with **Setup → Add-on Modules → Install Module**, pasting `https://github.com/<you>/<repo>/releases/latest/download/module.json`. [RELEASING.md](RELEASING.md) has the steps.
 
-## Status
-
-- **Render-proven.** A full licensed end-to-end run on Foundry **v14.364** (2026-07-14): the converted module installed, all journal pages rendered, and `@UUID` cross-links resolved and navigated in-app. Three format fixes found during that run are folded in.
-- **JournalEntry-only by design.** OnlyWorlds elements map to journal pages, which are game-system-agnostic. Foundry `Actor` / `Item` documents are per-game-system (dnd5e, pf2e, …) and out of scope: mapping a Character to a dnd5e Actor sheet is a separate, system-specific effort.
-- **Pack compilation is real**: `@foundryvtt/foundryvtt-cli`'s `compilePack` produces a LevelDB pack from the module tree. The tests exercise it when the devDep is installed and skip it otherwise.
-- **Foundry document schema**: pages use `type: "text"`, `text.format: 1` (HTML), `title.show: false`; JournalEntry/page `ownership.default` and `sort` set to conservative defaults; a `flags["ow-foundry"]` namespace carries the source UUID + type.
-
-## Dev
+## Development
 
 ```
-npm run fixtures   # synthetic OW world folder (original SFW content)
-npm test           # node --test — reader, id stability, page HTML, module shape, CLI e2e, pack
+npm run fixtures   # regenerate the synthetic test world
+npm test           # run npm install first: the pack test needs foundryvtt-cli
 ```
+
+## Links
+
+- [Docs](https://onlyworlds.github.io) · [The OnlyWorlds schema](https://github.com/OnlyWorlds/OnlyWorlds)
+- [Discord](https://discord.gg/twCjqvVBwb) · [Issues](https://github.com/OnlyWorlds/foundry-converter/issues)
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
