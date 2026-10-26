@@ -93,7 +93,7 @@ export function buildPageHtml(element, resolve) {
   const parts = [];
   // No name <h1> in the body: the page renders its own title (title.show), and
   // Foundry builds the in-page TOC from content headings -- an h1 here doubled
-  // every name in the sidebar (caught by Captain in the first licensed render).
+  // every name in the sidebar (caught in the first licensed render).
 
   if (element.description) parts.push(paragraphs(element.description));
 
