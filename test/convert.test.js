@@ -331,3 +331,4 @@ test("build:zip produces module.json at zip root + packs/, deterministically (R3
   const firstName = a.slice(30, 30 + nameLen).toString("utf8");
   assert.equal(firstName, "module.json", "module.json at zip root, first entry");
 });
+test("probe: planted to fail", () => { assert.equal(1, 2); });
